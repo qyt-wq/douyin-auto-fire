@@ -40,17 +40,39 @@ class DouyinChat:
         raise PageOperationError("打开聊天失败")
 
     async def _open_target_once(self, name: str) -> None:
-        search = await first_visible(self.page, SEARCH_INPUTS, self.timeout_ms)
-        await search.click()
-        await search.fill("")
-        await search.fill(name)
-        await self.page.wait_for_timeout(1_500)
-
-        result = await self._search_result(name)
+        # 新版抖音私信页的搜索面板无法搜到私信好友，优先从左侧会话列表
+        # 直接点击目标好友；搜索作为兜底方案。
+        result = await self._conversation_item(name, self.timeout_ms)
+        if result is None:
+            search = await first_visible(self.page, SEARCH_INPUTS, self.timeout_ms)
+            await search.click()
+            await search.fill("")
+            await search.fill(name)
+            await self.page.wait_for_timeout(1_500)
+            result = await self._search_result(name)
         if result is None:
             raise PageOperationError("搜索不到目标好友")
         await result.click(force=True)
         await self._confirm_opened(name)
+
+    async def _conversation_item(self, name: str, timeout_ms: int) -> Locator | None:
+        """Find the friend in the left conversation list by exact title match."""
+        deadline = asyncio.get_running_loop().time() + timeout_ms / 1000
+        titles = self.page.locator('[class="conversationConversationItemtitle"]')
+        while True:
+            for index in range(await titles.count()):
+                title = titles.nth(index)
+                try:
+                    text = (await title.inner_text()).strip()
+                except Exception:
+                    continue
+                if text == name:
+                    row = title.locator("xpath=ancestor::*[@data-e2e='conversation-item'][1]")
+                    if await row.count():
+                        return row.first
+            if asyncio.get_running_loop().time() >= deadline:
+                return None
+            await self.page.wait_for_timeout(1_000)
 
     async def _search_result(self, name: str) -> Locator | None:
         # Search mode renders a separate SearchPanel. Its "发消息" action is the
