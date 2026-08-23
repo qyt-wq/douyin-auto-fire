@@ -1,7 +1,7 @@
 # 🔥 抖音自动续火花
 
-[![GitHub stars](https://img.shields.io/github/stars/unmev/douyin-auto-fire?style=flat-square)](https://github.com/unmev/douyin-auto-fire/stargazers)
-![Visitors](https://visitor-badge.laobi.icu/badge?page_id=unmev.douyin-auto-fire)
+[![GitHub stars](https://img.shields.io/github/stars/BEER-BELLY-DU/douyin-auto-fire?style=flat-square)](https://github.com/BEER-BELLY-DU/douyin-auto-fire/stargazers)
+![Visitors](https://visitor-badge.laobi.icu/badge?page_id=BEER-BELLY-DU.douyin-auto-fire)
 
 > 定时自动向抖音好友发送消息，保持火花不断。基于 Playwright 模拟真实浏览器操作，配合 GitHub Actions 定时运行，**无需服务器长期在线**。
 >
@@ -19,6 +19,7 @@
 - 🛡️ **失败诊断**：失败时自动保存日志、页面截图和 Playwright trace，便于排查
 - 👤 **登录凭证灵活**：支持 Cookie 或浏览器存储状态（Storage State），可选无头模式
 - ⏱️ **模拟真人操作**：随机发送间隔、输入与发送节奏
+- 🔧 **适配新版抖音私信页**：优先从左侧会话列表直接打开好友，搜索兜底，兼容不同页面版本
 
 > `DOUYIN_COOKIE` 是登录凭证，请只保存在 GitHub Secrets 中，不要提交到仓库或公开分享。
 
@@ -94,7 +95,7 @@ tzdata>=2025.2
 | `DINGTALK_SECRET` | 钉钉机器人 Secret | 否 |
 
 钉钉通知不用就不要配置；需要使用时，两个钉钉 Secret 必须同时填写。
-**若有多个账号就是用下面[多账号](#10-多账号可选)的配置文件变量名称**  网页操作起来还是很简单的
+**若有多个账号，使用下面的[多账号](#10-多账号可选)配置文件变量名称即可**
 
 ### DOUYIN_CONFIG 示例
 
@@ -134,9 +135,9 @@ tzdata>=2025.2
 
 第一次建议只配置 **1 个好友** 测试。修改好友、消息或表情时，直接更新 `DOUYIN_CONFIG` Secret 即可。
 
-**不会配置可以使用[config.json生成器](https://douyin-config.pages.dev/)**  网页操作起来还是很简单的
+**不会配置可以使用[config.json生成器](https://douyin-config.pages.dev/)**，网页操作起来还是很简单的
 
-生成器的很多表情的都是货不对板  比心是可以正常使用的 文字没有问题
+生成器里的很多表情货不对板，比心可以正常使用，文字没有问题
 
 ## 4. 先运行 Dry Run
 
@@ -181,11 +182,11 @@ dry_run = false
 
 ```yaml
 schedule:
-  - cron: "0 0 * * *"
+  - cron: "1 0 * * *"
     timezone: "Asia/Shanghai"
 ```
 
-表示 **每天北京时间 00:00** 自动运行。
+表示 **每天北京时间 00:01** 自动运行。
 
 例如改成每天北京时间 08:30：
 
@@ -294,11 +295,11 @@ workflow 会自动为每个配齐了 Cookie 与 Config 的账号生成
 
 ## Star History
 
-<a href="https://www.star-history.com/?repos=unmev%2Fdouyin-auto-fire&type=timeline&logscale=&legend=top-left">
+<a href="https://www.star-history.com/?repos=BEER-BELLY-DU%2Fdouyin-auto-fire&type=timeline&logscale=&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=unmev/douyin-auto-fire&type=timeline&theme=dark&logscale&legend=top-left&sealed_token=mG37UD2jXGVQJy-H4cuDopHM4wILzzGQXTz_IEdDgAijz0DDijk1go72jyWmrUZlNRVibNgW6OTl-YQamgUPkpFo_gAO2EPSlVwuZUX3n_7AuKwAK40HMQ" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=unmev/douyin-auto-fire&type=timeline&logscale&legend=top-left&sealed_token=mG37UD2jXGVQJy-H4cuDopHM4wILzzGQXTz_IEdDgAijz0DDijk1go72jyWmrUZlNRVibNgW6OTl-YQamgUPkpFo_gAO2EPSlVwuZUX3n_7AuKwAK40HMQ" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=unmev/douyin-auto-fire&type=timeline&logscale&legend=top-left&sealed_token=mG37UD2jXGVQJy-H4cuDopHM4wILzzGQXTz_IEdDgAijz0DDijk1go72jyWmrUZlNRVibNgW6OTl-YQamgUPkpFo_gAO2EPSlVwuZUX3n_7AuKwAK40HMQ" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=BEER-BELLY-DU/douyin-auto-fire&type=timeline&theme=dark&logscale&legend=top-left&sealed_token=mG37UD2jXGVQJy-H4cuDopHM4wILzzGQXTz_IEdDgAijz0DDijk1go72jyWmrUZlNRVibNgW6OTl-YQamgUPkpFo_gAO2EPSlVwuZUX3n_7AuKwAK40HMQ" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=BEER-BELLY-DU/douyin-auto-fire&type=timeline&logscale&legend=top-left&sealed_token=mG37UD2jXGVQJy-H4cuDopHM4wILzzGQXTz_IEdDgAijz0DDijk1go72jyWmrUZlNRVibNgW6OTl-YQamgUPkpFo_gAO2EPSlVwuZUX3n_7AuKwAK40HMQ" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=BEER-BELLY-DU/douyin-auto-fire&type=timeline&logscale&legend=top-left&sealed_token=mG37UD2jXGVQJy-H4cuDopHM4wILzzGQXTz_IEdDgAijz0DDijk1go72jyWmrUZlNRVibNgW6OTl-YQamgUPkpFo_gAO2EPSlVwuZUX3n_7AuKwAK40HMQ" />
  </picture>
 </a>
 
