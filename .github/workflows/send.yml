@@ -8,15 +8,88 @@ on:
         type: boolean
         default: false
   schedule:
-    - cron: "5 12 * * *"
+    # 准时发送机制：北京时间 10:00-13:55 每 5 分钟轮询一次。
+    # 真正的发送时刻由 SEND_AT 决定（默认 12:05），只有命中
+    # SEND_AT 之后、且当天尚未发送的那一次轮询才会真正发送；
+    # 其余轮询在 check job 即结束，不安装依赖、不消耗分钟。
+    - cron: "*/5 10-13 * * *"
       timezone: "Asia/Shanghai"
 
 concurrency:
+  # 同一时刻只保留一个运行中的工作流，后续轮询排队等待（而非取消），
+  # 确保“发送”与“写入当天已发送标记”串行完成，从机制上避免重复发送。
   group: douyin-daily-sender
   cancel-in-progress: false
 
+env:
+  # 目标发送时间（北京时间 HH:MM）。可在仓库
+  # Settings -> Secrets and variables -> Actions -> Variables 中
+  # 新增 DOUYIN_SEND_AT 覆盖，未设置时默认 12:05。
+  SEND_AT: ${{ vars.DOUYIN_SEND_AT || '12:05' }}
+
 jobs:
+  # —— 判定：是否需要在本次轮询发送（便宜，几乎不耗分钟）——
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      should_send: ${{ steps.finalize.outputs.should_send }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve clock in Asia/Shanghai
+        id: clock
+        if: github.event_name == 'schedule'
+        shell: bash
+        run: |
+          echo "date=$(TZ=Asia/Shanghai date +%F)" >> "$GITHUB_OUTPUT"
+          echo "epoch=$(TZ=Asia/Shanghai date +%s)" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for send time
+        id: timegate
+        if: github.event_name == 'schedule'
+        shell: bash
+        run: |
+          target=$(TZ=Asia/Shanghai date -d "$SEND_AT" +%s)
+          if [ "${{ steps.clock.outputs.epoch }}" -lt "$target" ]; then
+            echo "should_send=false" >> "$GITHUB_OUTPUT"
+            echo "尚未到发送时间 $SEND_AT"
+          else
+            echo "should_send=true" >> "$GITHUB_OUTPUT"
+            echo "已到发送时间 $SEND_AT"
+          fi
+
+      - name: Restore sent-today marker
+        id: marker
+        if: github.event_name == 'schedule'
+        uses: actions/cache/restore@v4
+        with:
+          path: .sent-marker
+          key: douyin-sent-${{ steps.clock.outputs.date }}
+
+      - name: Finalize decision
+        id: finalize
+        shell: bash
+        run: |
+          should_send="true"
+          if [ "${{ github.event_name }}" == "schedule" ]; then
+            if [ "${{ steps.timegate.outputs.should_send }}" == "false" ]; then
+              should_send="false"
+            fi
+            if [ "${{ steps.marker.outputs.cache-hit }}" == "true" ]; then
+              should_send="false"
+              echo "今天已发送，跳过本轮"
+            fi
+          fi
+          echo "should_send=$should_send" >> "$GITHUB_OUTPUT"
+          echo "本次决定: should_send=$should_send"
+
+  # —— 发送：仅当 check 判定需要发送时执行 ——
   send:
+    needs: check
+    if: needs.check.outputs.should_send == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -106,6 +179,7 @@ jobs:
           )
           PY
       - name: Run
+        id: run
         shell: bash
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.dry_run }}" == "true" ]]; then
@@ -113,6 +187,25 @@ jobs:
           else
             python run.py
           fi
+
+      # 发送尝试完成后（无论成败）写入“今日已发送”标记，避免当天后续
+      # 轮询重复发送。仅当真正执行到发送步骤（run 未因前置失败被跳过）时写标记。
+      - name: Mark sent today
+        id: mark
+        if: github.event_name == 'schedule' && steps.run.outcome != 'skipped'
+        shell: bash
+        run: |
+          mkdir -p .sent-marker
+          date > .sent-marker/done
+          echo "date=$(TZ=Asia/Shanghai date +%F)" >> "$GITHUB_OUTPUT"
+
+      - name: Save sent-today marker
+        if: github.event_name == 'schedule' && steps.run.outcome != 'skipped'
+        uses: actions/cache/save@v4
+        with:
+          path: .sent-marker
+          key: douyin-sent-${{ steps.mark.outputs.date }}
+
       - name: Upload diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
